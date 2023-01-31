@@ -36,6 +36,7 @@ type alias Model =
     , index : Int
     , dictionary : List WordInfo
     , winOrLose : WinOrLose
+    --, debugage : String
     }
 
 type alias WordInfo = 
@@ -72,7 +73,7 @@ main =
 -- INITIALIZATION
 init : () -> (Model, Cmd Msg)
 init _ =
-    ( Model Loading "" [] "" "" 0 [] Unknown
+    ( Model Loading "" [] "" "" 0 [] Unknown  
     , Http.get
         { url = "./Data.txt"
         , expect = Http.expectString Words
@@ -120,7 +121,7 @@ update msg model =
                     , Cmd.none
                     )
                 Err _ -> 
-                    ({model | dictionary = []}
+                    ({model | dictionary = [], state= Success (Debug.toString result)}
                     , Cmd.none
                     )
         
@@ -151,7 +152,7 @@ view model =
     case model.state of
         Success state -> 
             case state of
-            "" ->
+            "got Dictionnary" ->
                 div []
                     [ h1 [] [ text "Guess the W _ _ _ ! "] 
                     , div [style "text-align" "center"]
@@ -170,8 +171,10 @@ view model =
             "got random word" ->
                 div[]
                     [text (model.word ++ model.url)]
+            "cant read json" ->
+                div[] [text state]
             _ ->
-                div[][]
+                div[][ text (state ++ "  " ++ model.url)]
             
         
         Failure -> 
@@ -221,24 +224,25 @@ getDictionary model =
         }
 
 listDicoDecoder : Decoder (List WordInfo)
-listDicoDecoder = Json.Decode.list wordInfoDecoder
+listDicoDecoder = 
+    Json.Decode.list wordInfoDecoder
 
 wordInfoDecoder : Decoder WordInfo
 wordInfoDecoder = 
     map2 WordInfo 
-        (field "word" string)
-        (field "meanings" <|Json.Decode.list dicoDecoder)
+        (field "word" Json.Decode.string)
+        (field "meanings" <| Json.Decode.list dicoDecoder)
 
 dicoDecoder : Decoder Dictionary
 dicoDecoder = 
     Json.Decode.map2 Dictionary 
-        (field "partOfSpeech" string)
-        (field "definitions" <|Json.Decode.list defDecoder)
+        (field "partOfSpeech" Json.Decode.string)
+        (field "definitions" <| Json.Decode.list defDecoder)
 
 defDecoder : Decoder Def
 defDecoder = 
     Json.Decode.map Def
-        (field "definition" string)
+        (field "definition" Json.Decode.string)
 
 checkAnswer : Model -> Html Msg
 checkAnswer model = 
